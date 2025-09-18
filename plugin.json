@@ -5,6 +5,7 @@
   "api_version": 1,
   "publish": {
     "tags": ["utility", "brightness"],
-    "description": "Make your brightness even dimmer."
+    "description": "Make your brightness even dimmer.",
+    "image": "https://github.com/chenx-dust/DimmerDeck/raw/refs/heads/main/logo.png"
   }
 }
