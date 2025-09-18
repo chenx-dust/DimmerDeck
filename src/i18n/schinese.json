@@ -1,0 +1,7 @@
+{
+    "BRIGHTNESS": "亮度",
+    "DIMMER_BRIGHTNESS": "更暗的亮度",
+    "CONTROL": "控制",
+    "ENABLE_SHORTCUT_CONTROL": "启用快捷控制",
+    "ENABLE_SHORTCUT_CONTROL_DESC": "通过手柄调整更暗亮度"
+}

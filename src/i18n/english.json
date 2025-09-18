@@ -1,0 +1,7 @@
+{
+    "BRIGHTNESS": "Brightness",
+    "DIMMER_BRIGHTNESS": "Dimmer Brightness",
+    "CONTROL": "Control",
+    "ENABLE_SHORTCUT_CONTROL": "Enable Shortcut Control",
+    "ENABLE_SHORTCUT_CONTROL_DESC": "Dimmer brightness for gamepad shortcut"
+}

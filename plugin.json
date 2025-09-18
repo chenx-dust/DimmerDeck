@@ -1,0 +1,10 @@
+{
+  "name": "Dimmer Deck",
+  "author": "Chenx Dust",
+  "flags": [],
+  "api_version": 1,
+  "publish": {
+    "tags": ["utility", "brightness"],
+    "description": "Make your brightness even dimmer."
+  }
+}
