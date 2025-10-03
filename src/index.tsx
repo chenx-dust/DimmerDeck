@@ -4,7 +4,8 @@ import {
   staticClasses,
   SliderField,
   ToggleField,
-  Unregisterable
+  Unregisterable,
+  ButtonItem
 } from "@decky/ui";
 import {
   callable,
@@ -38,7 +39,10 @@ const setBrightness = (value: number) => {
   console.log(`Setting dimmer brightness to ${value}`);
   lastDimmerBrightness = value;
   setUiBrightnessCallback(value);
-  backendSetBrightness(value);
+  if (value == 1.)
+    backendReset();
+  else
+    backendSetBrightness(value);
 };
 
 const onBrightnessChangedCallback = (value: { flBrightness: number; }) => {

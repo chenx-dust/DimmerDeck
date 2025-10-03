@@ -115,20 +115,25 @@ async def remove_xprop(display: str, prop_name: str):
         logger.error(f"stderr: {stderr}")
         raise Exception("Failed to set xprop")
 
+lut3d_path = os.path.abspath(
+    os.path.join(decky.DECKY_PLUGIN_RUNTIME_DIR, "dim.lut3d")
+)
+lut1d_path = os.path.abspath(
+    os.path.join(decky.DECKY_PLUGIN_RUNTIME_DIR, "dim.lut1d")
+)
 
 class Plugin:
     async def activate(self):
+        logger.info("Activating")
         self.displays = get_steam_displays()
         self.first_run = True
+        generate_lut3d(lut3d_path, 1.0)
         logger.info(f"Found steam displays: {self.displays}")
 
     async def prepare(self):
+        logger.info("Preparing")
         for display in self.displays:
             await set_xprop(display, "GAMESCOPE_COMPOSITE_FORCE", "8c", 1)
-        lut3d_path = os.path.abspath(
-            os.path.join(decky.DECKY_PLUGIN_RUNTIME_DIR, "dim.lut3d")
-        )
-        generate_lut3d(lut3d_path, 1.0)
         await set_xprop(display, "GAMESCOPE_COLOR_3DLUT_OVERRIDE", "8u", lut3d_path)
 
     async def set_brightness(self, brightness: float):
@@ -136,9 +141,6 @@ class Plugin:
             self.first_run = False
             await self.prepare()
 
-        lut1d_path = os.path.abspath(
-            os.path.join(decky.DECKY_PLUGIN_RUNTIME_DIR, "dim.lut1d")
-        )
         generate_lut1d(lut1d_path, brightness)
         for display in self.displays:
             await set_xprop(
@@ -146,6 +148,7 @@ class Plugin:
             )
 
     async def reset(self):
+        logger.info("Resetting")
         self.first_run = True
         for display in self.displays:
             await remove_xprop(display, "GAMESCOPE_COMPOSITE_FORCE")
