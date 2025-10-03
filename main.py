@@ -117,12 +117,12 @@ async def remove_xprop(display: str, prop_name: str):
 
 
 class Plugin:
-    async def _main(self):
+    async def activate(self):
         self.displays = get_steam_displays()
         self.first_run = True
+        logger.info(f"Found steam displays: {self.displays}")
 
     async def prepare(self):
-        logger.info(f"Found steam displays: {self.displays}")
         for display in self.displays:
             await set_xprop(display, "GAMESCOPE_COMPOSITE_FORCE", "8c", 1)
         lut3d_path = os.path.abspath(
@@ -151,3 +151,11 @@ class Plugin:
             await remove_xprop(display, "GAMESCOPE_COMPOSITE_FORCE")
             await remove_xprop(display, "GAMESCOPE_COLOR_SHAPERLUT_OVERRIDE")
             await remove_xprop(display, "GAMESCOPE_COLOR_3DLUT_OVERRIDE")
+
+    async def _unload(self):
+        if not self.first_run:
+            await self.reset()
+
+    async def _uninstall(self):
+        if not self.first_run:
+            await self.reset()

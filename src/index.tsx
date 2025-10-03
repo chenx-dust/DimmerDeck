@@ -29,6 +29,7 @@ let unregisterBrightnessCallback: Unregisterable | null = null;
 
 const backendSetBrightness = callable<[number], void>("set_brightness");
 const backendReset = callable<[], void>("reset");
+const backendActivate = callable<[], void>("activate");
 
 const clampBrightness = (value: number) => Math.min(Math.max(value, 0.), 1.);
 
@@ -37,11 +38,7 @@ const setBrightness = (value: number) => {
   console.log(`Setting dimmer brightness to ${value}`);
   lastDimmerBrightness = value;
   setUiBrightnessCallback(value);
-  if (lastSystemBrightness === 1.) {
-    backendReset();
-  } else {
-    backendSetBrightness(value);
-  }
+  backendSetBrightness(value);
 };
 
 const onBrightnessChangedCallback = (value: { flBrightness: number; }) => {
@@ -145,6 +142,7 @@ function Content() {
 
 export default definePlugin(() => {
   localizationManager.init();
+  backendActivate();
   setShortcutControl(localStorage.getItem("dimmer_deck.shortcut") === "true");
 
   return {
@@ -156,5 +154,8 @@ export default definePlugin(() => {
     content: <Content />,
     // The icon displayed in the plugin list
     icon: <LuSunMoon />,
+    onDismount() {
+      backendReset();
+    },
   };
 });
