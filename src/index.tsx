@@ -5,7 +5,6 @@ import {
   SliderField,
   ToggleField,
   Unregisterable,
-  ButtonItem
 } from "@decky/ui";
 import {
   callable,
@@ -159,6 +158,7 @@ export default definePlugin(() => {
     // The icon displayed in the plugin list
     icon: <LuSunMoon />,
     onDismount() {
+      setShortcutControl(false);
       backendReset();
     },
   };

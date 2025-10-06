@@ -10,7 +10,6 @@ logger = decky.logger
 LUT1D_SIZE = 4096
 LUT3D_SIZE = 17
 
-
 def get_steam_displays() -> List[str]:
     displays = []
     for pid in os.listdir("/proc"):
@@ -156,9 +155,11 @@ class Plugin:
             await remove_xprop(display, "GAMESCOPE_COLOR_3DLUT_OVERRIDE")
 
     async def _unload(self):
+        logger.info("Unloading")
         if not self.first_run:
             await self.reset()
 
     async def _uninstall(self):
+        logger.info("Uninstalling")
         if not self.first_run:
             await self.reset()
