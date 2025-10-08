@@ -1,9 +1,9 @@
 import os
 import struct
+import subprocess
 from typing import Any, List
 
 import decky
-import asyncio
 
 logger = decky.logger
 
@@ -73,7 +73,7 @@ def generate_lut3d(output: str, brightness: float):
                     f.write(bs)
 
 
-async def set_xprop(display: str, prop_name: str, prop_type: str, prop_value: Any):
+def set_xprop(display: str, prop_name: str, prop_type: str, prop_value: Any):
     cmd = [
         "xprop",
         "-root",
@@ -86,17 +86,13 @@ async def set_xprop(display: str, prop_name: str, prop_type: str, prop_value: An
         prop_name,
         str(prop_value),
     ]
-    proc = await asyncio.subprocess.create_subprocess_exec(*cmd)
-    await proc.wait()
-    if proc.returncode != 0:
+    ret = subprocess.call(cmd)
+    if ret != 0:
         logger.error(f"Failed to set xprop, cmd: {cmd}")
-        stdout, stderr = await proc.communicate()
-        logger.error(f"stdout: {stdout}")
-        logger.error(f"stderr: {stderr}")
         raise Exception("Failed to set xprop")
 
 
-async def remove_xprop(display: str, prop_name: str):
+def remove_xprop(display: str, prop_name: str):
     cmd = [
         "xprop",
         "-root",
@@ -105,13 +101,9 @@ async def remove_xprop(display: str, prop_name: str):
         "-remove",
         prop_name,
     ]
-    proc = await asyncio.subprocess.create_subprocess_exec(*cmd)
-    await proc.wait()
-    if proc.returncode != 0:
-        logger.error(f"Failed to remove xprop, cmd: {cmd}")
-        stdout, stderr = await proc.communicate()
-        logger.error(f"stdout: {stdout}")
-        logger.error(f"stderr: {stderr}")
+    ret = subprocess.call(cmd)
+    if ret != 0:
+        logger.error(f"Failed to set xprop, cmd: {cmd}")
         raise Exception("Failed to set xprop")
 
 lut3d_path = os.path.abspath(
@@ -129,20 +121,20 @@ class Plugin:
         generate_lut3d(lut3d_path, 1.0)
         logger.info(f"Found steam displays: {self.displays}")
 
-    async def prepare(self):
+    def prepare(self):
         logger.info("Preparing")
+        self.first_run = False
         for display in self.displays:
-            await set_xprop(display, "GAMESCOPE_COMPOSITE_FORCE", "8c", 1)
-        await set_xprop(display, "GAMESCOPE_COLOR_3DLUT_OVERRIDE", "8u", lut3d_path)
+            set_xprop(display, "GAMESCOPE_COMPOSITE_FORCE", "8c", 1)
+        set_xprop(display, "GAMESCOPE_COLOR_3DLUT_OVERRIDE", "8u", lut3d_path)
 
     async def set_brightness(self, brightness: float):
         if self.first_run:
-            self.first_run = False
-            await self.prepare()
+            self.prepare()
 
         generate_lut1d(lut1d_path, brightness)
         for display in self.displays:
-            await set_xprop(
+            set_xprop(
                 display, "GAMESCOPE_COLOR_SHAPERLUT_OVERRIDE", "8u", lut1d_path
             )
 
@@ -150,16 +142,11 @@ class Plugin:
         logger.info("Resetting")
         self.first_run = True
         for display in self.displays:
-            await remove_xprop(display, "GAMESCOPE_COMPOSITE_FORCE")
-            await remove_xprop(display, "GAMESCOPE_COLOR_SHAPERLUT_OVERRIDE")
-            await remove_xprop(display, "GAMESCOPE_COLOR_3DLUT_OVERRIDE")
+            remove_xprop(display, "GAMESCOPE_COMPOSITE_FORCE")
+            remove_xprop(display, "GAMESCOPE_COLOR_SHAPERLUT_OVERRIDE")
+            remove_xprop(display, "GAMESCOPE_COLOR_3DLUT_OVERRIDE")
 
     async def _unload(self):
         logger.info("Unloading")
-        if not self.first_run:
-            await self.reset()
-
-    async def _uninstall(self):
-        logger.info("Uninstalling")
         if not self.first_run:
             await self.reset()

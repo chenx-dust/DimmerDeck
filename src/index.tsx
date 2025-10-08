@@ -159,7 +159,6 @@ export default definePlugin(() => {
     icon: <LuSunMoon />,
     onDismount() {
       setShortcutControl(false);
-      backendReset();
     },
   };
 });
