@@ -1,6 +1,6 @@
 {
   "name": "dimmer-deck",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Make your brightness even dimmer",
   "type": "module",
   "scripts": {
