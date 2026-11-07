@@ -7,8 +7,10 @@ import decky
 
 logger = decky.logger
 
-LUT1D_SIZE = 4096
-LUT3D_SIZE = 17
+# Gain is applied to linear light, while the slider is in gamma-encoded space
+DISPLAY_GAMMA = 2.2
+# A gain of 0 would flatten the shaper LUT that gamescope builds its 3D LUT from
+MIN_GAIN = 0.0001
 
 def get_steam_displays() -> List[str]:
     displays = []
@@ -33,44 +35,16 @@ def get_steam_displays() -> List[str]:
     return displays
 
 
-def quantize(x: float) -> int:
-    return int(round(x * 65535))
-
-
-def generate_lut1d(output: str, brightness: float):
+def brightness_to_gain(brightness: float) -> float:
     if brightness < 0 or brightness > 1:
         logger.error("Invalid brightness")
         raise ValueError("Brightness must be between 0 and 1")
-    to_unit = lambda i: i / (LUT1D_SIZE - 1) * brightness
-    with open(output, "wb") as f:
-        for x in range(LUT1D_SIZE):
-            bs = struct.pack(
-                "<HHHH",
-                quantize(to_unit(x)),
-                quantize(to_unit(x)),
-                quantize(to_unit(x)),
-                0,
-            )
-            f.write(bs)
+    return max(brightness**DISPLAY_GAMMA, MIN_GAIN)
 
 
-def generate_lut3d(output: str, brightness: float):
-    if brightness < 0 or brightness > 1:
-        logger.error("Invalid brightness")
-        raise ValueError("Brightness must be between 0 and 1")
-    to_unit = lambda i: i / (LUT3D_SIZE - 1) * brightness
-    with open(output, "wb") as f:
-        for b in range(LUT3D_SIZE):
-            for g in range(LUT3D_SIZE):
-                for r in range(LUT3D_SIZE):
-                    bs = struct.pack(
-                        "<HHHH",
-                        quantize(to_unit(r)),
-                        quantize(to_unit(g)),
-                        quantize(to_unit(b)),
-                        0,
-                    )
-                    f.write(bs)
+def float_to_cardinal(x: float) -> int:
+    # Gamescope reads float atoms by reinterpreting the 32-bit cardinal's bits
+    return struct.unpack("<I", struct.pack("<f", x))[0]
 
 
 def set_xprop(display: str, prop_name: str, prop_type: str, prop_value: Any):
@@ -106,19 +80,15 @@ def remove_xprop(display: str, prop_name: str):
         logger.error(f"Failed to set xprop, cmd: {cmd}")
         raise Exception("Failed to set xprop")
 
-lut3d_path = os.path.abspath(
-    os.path.join(decky.DECKY_PLUGIN_RUNTIME_DIR, "dim.lut3d")
-)
-lut1d_path = os.path.abspath(
-    os.path.join(decky.DECKY_PLUGIN_RUNTIME_DIR, "dim.lut1d")
-)
+def set_sdr_gain(display: str, gain: float):
+    set_xprop(display, "GAMESCOPE_SDR_INPUT_GAIN", "32c", float_to_cardinal(gain))
+
 
 class Plugin:
     async def activate(self):
         logger.info("Activating")
         self.displays = get_steam_displays()
         self.first_run = True
-        generate_lut3d(lut3d_path, 1.0)
         logger.info(f"Found steam displays: {self.displays}")
 
     def prepare(self):
@@ -126,25 +96,22 @@ class Plugin:
         self.first_run = False
         for display in self.displays:
             set_xprop(display, "GAMESCOPE_COMPOSITE_FORCE", "8c", 1)
-        set_xprop(display, "GAMESCOPE_COLOR_3DLUT_OVERRIDE", "8u", lut3d_path)
 
     async def set_brightness(self, brightness: float):
         if self.first_run:
             self.prepare()
 
-        generate_lut1d(lut1d_path, brightness)
+        gain = brightness_to_gain(brightness)
         for display in self.displays:
-            set_xprop(
-                display, "GAMESCOPE_COLOR_SHAPERLUT_OVERRIDE", "8u", lut1d_path
-            )
+            set_sdr_gain(display, gain)
 
     async def reset(self):
         logger.info("Resetting")
         self.first_run = True
         for display in self.displays:
             remove_xprop(display, "GAMESCOPE_COMPOSITE_FORCE")
-            remove_xprop(display, "GAMESCOPE_COLOR_SHAPERLUT_OVERRIDE")
-            remove_xprop(display, "GAMESCOPE_COLOR_3DLUT_OVERRIDE")
+            # Don't remove this one: gamescope reads a missing atom as a gain of 0
+            set_sdr_gain(display, 1.0)
 
     async def _unload(self):
         logger.info("Unloading")
